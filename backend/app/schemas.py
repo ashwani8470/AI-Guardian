@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class RiskTier(str, Enum):
@@ -59,8 +59,9 @@ class ScreenshotScanRequest(BaseModel):
 # ---- Unified response (every endpoint returns this shape) ----
 
 class UserSignup(BaseModel):
-    email: str
-    password: str = Field(..., min_length=6)
+    name: str = Field(..., min_length=1, max_length=100)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
 
 
 class UserLogin(BaseModel):

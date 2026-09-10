@@ -6,6 +6,7 @@ import ShieldMark from "../components/ShieldMark";
 export default function Signup() {
   const { signup, error } = useAuth();
   const navigate = useNavigate();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export default function Signup() {
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
-    const ok = await signup(email, password);
+    const ok = await signup(name, email, password);
     setLoading(false);
     if (ok) navigate("/app");
   }
@@ -30,6 +31,21 @@ export default function Signup() {
         <p className="mt-1 text-sm text-textSecondary">Start checking messages, links, and screenshots.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-sm text-textSecondary" htmlFor="name">
+              Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              required
+              minLength={1}
+              maxLength={100}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
+            />
+          </div>
           <div>
             <label className="block text-sm text-textSecondary" htmlFor="email">
               Email

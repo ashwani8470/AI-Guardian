@@ -22,10 +22,10 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signup(email, password) {
+  async function signup(name, email, password) {
     setError("");
     try {
-      await api.signup({ email, password });
+      await api.signup({ name, email, password });
       return await login(email, password);
     } catch (e) {
       setError(e.message);
