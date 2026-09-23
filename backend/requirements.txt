@@ -11,3 +11,7 @@ psycopg2-binary
 python-jose[cryptography]
 bcrypt
 email-validator
+
+# ML inference (loading trained .joblib models from models/)
+scikit-learn
+joblib

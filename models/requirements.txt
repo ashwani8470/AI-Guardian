@@ -1,0 +1,4 @@
+# Deps for training scripts in models/ (not needed at serving time in backend/)
+pandas
+scikit-learn
+joblib
