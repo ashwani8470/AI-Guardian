@@ -18,6 +18,9 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    phone_number = Column(String, nullable=True)
+    gender = Column(String, nullable=True)
+    address = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     scans = relationship("Scan", back_populates="user")

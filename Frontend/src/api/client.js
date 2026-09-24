@@ -46,6 +46,9 @@ export const api = {
       auth: false,
     }),
 
+  getProfile: () => request("/auth/me", { method: "GET" }),
+  updateProfile: (payload) => request("/auth/profile", { method: "PUT", body: payload }),
+
   predictText: (content) => request("/predict/text", { method: "POST", body: { content } }),
   predictUrl: (url) => request("/predict/url", { method: "POST", body: { url } }),
   predictEmail: (payload) => request("/predict/email", { method: "POST", body: payload }),

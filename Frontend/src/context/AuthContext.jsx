@@ -54,8 +54,13 @@ export function AuthProvider({ children }) {
     setIsAuthed(false);
   }
 
+  function updateUser(profile) {
+    setStoredUser(profile);
+    setUser(profile);
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthed, user, error, login, signup, logout }}>
+    <AuthContext.Provider value={{ isAuthed, user, error, login, signup, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

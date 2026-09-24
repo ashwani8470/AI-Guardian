@@ -22,6 +22,8 @@ from app.schemas import (
     ResetPasswordRequest,
     Token,
     UserLogin,
+    UserProfile,
+    UserProfileUpdate,
     UserSignup,
 )
 
@@ -154,3 +156,23 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+@router.get("/me", response_model=UserProfile)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.put("/profile", response_model=UserProfile)
+def update_profile(
+    payload: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user

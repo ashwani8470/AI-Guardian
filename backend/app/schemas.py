@@ -69,6 +69,25 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserProfile(BaseModel):
+    id: str
+    name: str
+    email: EmailStr
+    phone_number: Optional[str] = None
+    gender: Optional[str] = None
+    address: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    phone_number: Optional[str] = None
+    gender: Optional[str] = None
+    address: Optional[str] = None
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
