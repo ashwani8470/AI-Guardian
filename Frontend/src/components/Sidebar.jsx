@@ -2,14 +2,6 @@ import { NavLink } from "react-router-dom";
 import ShieldMark from "./ShieldMark";
 import { useAuth } from "../context/AuthContext";
 
-const SCAN_LINKS = [
-  { to: "/app/scan/text", label: "Text & SMS" },
-  { to: "/app/scan/email", label: "Email" },
-  { to: "/app/scan/url", label: "Links & URLs" },
-  { to: "/app/scan/qr", label: "QR codes" },
-  { to: "/app/scan/screenshot", label: "Payment screenshot" },
-];
-
 function linkClasses({ isActive }) {
   return [
     "block rounded-md px-3 py-2 text-sm transition-colors",
@@ -25,7 +17,7 @@ export default function Sidebar() {
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-hairline bg-surface">
       <div className="flex items-center gap-2 px-4 py-5">
-        <ShieldMark className="text-brand" />
+        <ShieldMark className="text-brand" glow />
         <span className="font-display text-base font-semibold text-textPrimary">AI Guardian</span>
       </div>
 
@@ -33,21 +25,11 @@ export default function Sidebar() {
         <NavLink to="/app" end className={linkClasses}>
           Overview
         </NavLink>
-
-        <p className="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-textSecondary/70">
-          Scan
-        </p>
-        {SCAN_LINKS.map((link) => (
-          <NavLink key={link.to} to={link.to} className={linkClasses}>
-            {link.label}
-          </NavLink>
-        ))}
-
-        <p className="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-textSecondary/70">
-          Activity
-        </p>
+        <NavLink to="/app/account" className={linkClasses}>
+          My account
+        </NavLink>
         <NavLink to="/app/history" className={linkClasses}>
-          Scan history
+          History
         </NavLink>
       </nav>
 

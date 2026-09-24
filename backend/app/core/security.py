@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import hashlib
+import secrets
 
 import bcrypt
 from jose import JWTError, jwt
@@ -28,3 +30,19 @@ def decode_access_token(token: str) -> Optional[str]:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def generate_password_reset_token() -> tuple[str, str]:
+    """
+    Returns (raw_token, token_hash).
+    raw_token: goes in the emailed link only, never stored.
+    token_hash: what actually gets stored in the DB (sha256 hex digest),
+    so a DB leak alone can't be used to reset anyone's password.
+    """
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    return raw_token, token_hash
+
+
+def hash_reset_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()

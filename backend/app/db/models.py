@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -21,6 +21,25 @@ class User(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     scans = relationship("Scan", back_populates="user")
+
+
+class PasswordResetToken(Base):
+    """
+    A password-reset request. We never store the raw token — only its
+    SHA-256 hash — so a leaked DB row can't be used to reset the account
+    (same principle as password hashing). The raw token only ever exists
+    in the emailed link and briefly in memory on the server.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(String(36), primary_key=True, default=gen_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)  # sha256 hex digest
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = relationship("User")
 
 
 class Scan(Base):

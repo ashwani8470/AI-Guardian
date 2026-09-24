@@ -37,6 +37,14 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
 export const api = {
   signup: (payload) => request("/auth/signup", { method: "POST", body: payload, auth: false }),
   login: (payload) => request("/auth/login", { method: "POST", body: payload, auth: false }),
+  forgotPassword: (email) =>
+    request("/auth/forgot-password", { method: "POST", body: { email }, auth: false }),
+  resetPassword: (token, newPassword) =>
+    request("/auth/reset-password", {
+      method: "POST",
+      body: { token, new_password: newPassword },
+      auth: false,
+    }),
 
   predictText: (content) => request("/predict/text", { method: "POST", body: { content } }),
   predictUrl: (url) => request("/predict/url", { method: "POST", body: { url } }),
@@ -60,6 +68,25 @@ export function clearToken() {
 
 export function hasToken() {
   return !!getToken();
+}
+
+// Lightweight local profile cache (name/email) so the "My Account" page has
+// something to show without needing a dedicated /auth/me backend endpoint.
+// Populated from whatever the signup form collected, at login/signup time.
+export function setStoredUser(user) {
+  localStorage.setItem("ag_user", JSON.stringify(user));
+}
+
+export function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("ag_user")) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function clearStoredUser() {
+  localStorage.removeItem("ag_user");
 }
 
 export function fileToBase64(file) {

@@ -5,7 +5,9 @@ from app.db.database import get_db
 from app.db.models import Scan, ThreatReport, User
 from app.routers.auth import get_current_user
 from app.schemas import ScanResponse, UrlScanRequest
-from app.utils import dummy_response
+# Aliased on import - the route handler below is also named predict_url,
+# same name-collision bug you hit and fixed while wiring text.py.
+from app.services.url_classifier import predict_url as classify_url
 
 router = APIRouter(prefix="/predict/url", tags=["url"])
 
@@ -20,7 +22,7 @@ def predict_url(
     TODO: expand shortened URLs + check link reputation (Sparsh's
     preprocessing) before passing to the classifier.
     """
-    result = dummy_response(modality="url")
+    result = classify_url(payload.url)
 
     scan = Scan(
         id=result.scan_id,
