@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api } from "../../api/client";
-import RiskResult from "../../components/RiskResult";
+import ScanLoadingSteps from "../../components/ScanLoadingSteps";
+import ScanVerdict from "../../components/ScanVerdict";
 
 export default function ScanUrl() {
   const [url, setUrl] = useState("");
@@ -49,9 +50,18 @@ export default function ScanUrl() {
       </form>
 
       {error && <p className="mt-4 text-sm text-dangerous">{error}</p>}
-      {result && (
+
+      {loading && (
         <div className="mt-6">
-          <RiskResult result={result} />
+          <ScanLoadingSteps
+            steps={["Reading the URL…", "Checking known patterns…", "Scoring risk…"]}
+          />
+        </div>
+      )}
+
+      {result && !loading && (
+        <div className="mt-6">
+          <ScanVerdict result={result} />
         </div>
       )}
     </div>

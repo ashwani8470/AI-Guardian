@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../../api/client";
+import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
 
 export default function ScanText() {
@@ -49,7 +50,16 @@ export default function ScanText() {
       </form>
 
       {error && <p className="mt-4 text-sm text-dangerous">{error}</p>}
-      {result && (
+
+      {loading && (
+        <div className="mt-6">
+          <ScanLoadingSteps
+            steps={["Reading the message…", "Looking for scam patterns…", "Scoring risk…"]}
+          />
+        </div>
+      )}
+
+      {result && !loading && (
         <div className="mt-6">
           <RiskResult result={result} />
         </div>

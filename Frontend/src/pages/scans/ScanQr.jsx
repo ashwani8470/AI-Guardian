@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, fileToBase64 } from "../../api/client";
+import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
 import ImageDropInput from "../../components/ImageDropInput";
 
@@ -45,7 +46,21 @@ export default function ScanQr() {
       </form>
 
       {error && <p className="mt-4 text-sm text-dangerous">{error}</p>}
-      {result && (
+
+      {loading && (
+        <div className="mt-6">
+          <ScanLoadingSteps
+            steps={[
+              "Uploading image…",
+              "Decoding the QR code…",
+              "Checking the link inside…",
+              "Scoring risk…",
+            ]}
+          />
+        </div>
+      )}
+
+      {result && !loading && (
         <div className="mt-6">
           <RiskResult result={result} />
         </div>
