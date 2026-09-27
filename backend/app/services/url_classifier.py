@@ -73,10 +73,6 @@ FEATURE_LABELS = {
         1: "URL contains wording commonly used in phishing (login/verify/secure/etc.)",
         0: "URL does not contain common phishing-related wording",
     },
-    "uses_https": {
-        1: "URL does not use HTTPS",
-        0: "URL uses HTTPS",
-    },
     "subdomain_count": {
         1: "URL has an unusually high number of subdomains",
         0: "URL has a typical number of subdomains",
@@ -114,6 +110,15 @@ CONTINUOUS_PHISHING_THRESHOLDS = {
 }
 
 
+# Reserved for any future boolean feature where a raw value of 1 is the SAFE
+# signal rather than the risky one (uses_https used to live here until it
+# was dropped entirely - see the note in extract_features above). Every
+# boolean feature currently in FEATURE_LABELS has 1 = risky, so this is
+# empty, but _build_reason_codes still checks it for whichever feature
+# needs it next.
+INVERTED_BOOL_FEATURES = set()
+
+
 def shannon_entropy(s: str) -> float:
     if not s:
         return 0.0
@@ -143,3 +148,127 @@ def extract_features(url: str) -> tuple[dict, str]:
     features = {
         "url_length": len(url),
         "domain_length": len(domain),
+        "path_length": len(path),
+        "query_length": len(query),
+        "num_dots": url.count("."),
+        "num_hyphens": url.count("-"),
+        "num_underscores": url.count("_"),
+        "num_slashes": url.count("/"),
+        "num_digits": digits,
+        "digit_ratio": digits / len(url) if url else 0.0,
+        "num_special_chars": len(re.findall(r"[^a-zA-Z0-9./:-]", url)),
+        "has_ip_address": int(bool(re.match(r"^(\d{1,3}\.){3}\d{1,3}", domain))),
+        "has_at_symbol": int("@" in url),
+        # uses_https deliberately dropped from features/labels below: in the
+        # training dataset phishing URLs use HTTPS ~10x more often than the
+        # "legit" sample (free-hosting phishing pages default to HTTPS,
+        # while the legit sample skews toward an older HTTP-heavy crawl),
+        # so this feature taught the model an inverted, dataset-specific
+        # artifact - it was scoring plain https://google.com as phishing.
+        # Must stay dropped here in lockstep with train_url_model.py.
+        "is_shortener": int(any(s in domain.lower() for s in SHORTENERS)),
+        "subdomain_count": max(domain.count(".") - 1, 0),
+        "entropy": shannon_entropy(url),
+        "has_suspicious_word": int(any(w in url.lower() for w in SUSPICIOUS_WORDS)),
+    }
+
+    return features, domain
+
+
+@lru_cache(maxsize=1)
+def _load_model():
+    if not MODEL_PATH.exists() or not FEATURES_PATH.exists():
+        raise FileNotFoundError(
+            f"URL model files not found at {MODELS_DIR}. "
+            "Run `python models/train_url_model.py` from the repo root first."
+        )
+    model = joblib.load(MODEL_PATH)
+    feature_columns = joblib.load(FEATURES_PATH)
+    return model, feature_columns
+
+
+def _is_trusted(domain: str, url: str) -> bool:
+    """Trusted-domain override, gated against acutely dangerous wording
+    (e.g. a compromised .edu subdomain hosting a credential harvester)."""
+    domain_lower = domain.lower()
+    is_trusted_tld = any(domain_lower.endswith(tld) for tld in TRUSTED_TLDS)
+    is_trusted_domain = domain_lower in TRUSTED_DOMAINS or any(
+        domain_lower.endswith("." + d) for d in TRUSTED_DOMAINS
+    )
+    if not (is_trusted_tld or is_trusted_domain):
+        return False
+    return not any(w in url.lower() for w in HIGH_RISK_WORDS)
+
+
+def _build_reason_codes(features: dict, verdict: int, top_n: int = 3) -> list[ReasonCode]:
+    """Only cite features whose actual value supports the direction of the
+    overall verdict - see FEATURE_LABELS / CONTINUOUS_PHISHING_THRESHOLDS
+    docstrings above for why this check exists."""
+    candidates = []
+    for feat_name, labels in FEATURE_LABELS.items():
+        value = features.get(feat_name)
+        if value is None:
+            continue
+
+        if feat_name in CONTINUOUS_PHISHING_THRESHOLDS:
+            supports_phishing = value >= CONTINUOUS_PHISHING_THRESHOLDS[feat_name]
+        elif feat_name in INVERTED_BOOL_FEATURES:
+            supports_phishing = not bool(value)
+        else:
+            supports_phishing = bool(value)
+
+        cited_direction = 1 if supports_phishing else 0
+        if cited_direction != verdict:
+            continue
+
+        candidates.append((feat_name, labels[cited_direction], value))
+
+    reason_codes = []
+    for feat_name, label, value in candidates[:top_n]:
+        reason_codes.append(
+            ReasonCode(label=label, weight=1.0, detail=f"{feat_name} = {value}")
+        )
+
+    if not reason_codes:
+        direction = "phishing" if verdict == 1 else "safe"
+        reason_codes.append(
+            ReasonCode(
+                label=f"No single standout feature, but the overall pattern signals {direction}",
+                weight=0.5,
+            )
+        )
+    return reason_codes
+
+
+def predict_url(url: str) -> ScanResponse:
+    model, feature_columns = _load_model()
+
+    features, domain = extract_features(url)
+    X = pd.DataFrame([features])[feature_columns]
+
+    proba = model.predict_proba(X)[0]  # [P(safe), P(phishing)]
+    phishing_prob = float(proba[1])
+    risk_score = int(round(phishing_prob * 100))
+
+    if _is_trusted(domain, url):
+        risk_score = min(risk_score, 10)
+
+    if risk_score >= 71:
+        risk_tier = RiskTier.DANGEROUS
+    elif risk_score >= 31:
+        risk_tier = RiskTier.SUSPICIOUS
+    else:
+        risk_tier = RiskTier.SAFE
+
+    verdict = 1 if risk_score >= 50 else 0
+    reason_codes = _build_reason_codes(features, verdict)
+
+    return ScanResponse(
+        scan_id=str(uuid.uuid4()),
+        modality="url",
+        risk_score=risk_score,
+        risk_tier=risk_tier,
+        reason_codes=reason_codes,
+        extracted_text=domain,
+        confidence=round(float(max(proba)), 4),
+    )

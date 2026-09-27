@@ -32,6 +32,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 
 DATA_PATH = Path("data/urls.csv")
+# Augmentation set: real top-10k-domain homepage URLs (https://domain,
+# https://www.domain, http://domain), all labeled legitimate (status=1).
+# Added because the base dataset's "legitimate" class is almost entirely
+# deep content-page links (articles, blog posts) with long paths, while its
+# "phishing" class is mostly bare/shallow paths - path_length and
+# num_slashes ended up being >50% of the model's decision weight, so it
+# learned "short path = phishing" and flagged plain homepage visits like
+# https://www.google.com. This file has none of the base dataset's own
+# rows, so it's optional - training still works if it's absent.
+AUGMENT_PATH = Path("data/urls_augment.csv")
 MODEL_OUT = Path("models/url_model.joblib")
 FEATURES_OUT = Path("models/url_feature_columns.joblib")
 
@@ -90,7 +100,13 @@ def extract_features(url: str) -> dict:
         "num_special_chars": len(re.findall(r"[^a-zA-Z0-9./:-]", url)),
         "has_ip_address": int(bool(re.match(r"^(\d{1,3}\.){3}\d{1,3}", domain))),
         "has_at_symbol": int("@" in url),
-        "uses_https": int(url.lower().startswith("https")),
+        # uses_https deliberately dropped: in this dataset phishing URLs use
+        # HTTPS ~10x more often than the "legit" sample (free-hosting
+        # platforms like godaddysites.com serve HTTPS by default, while the
+        # legit sample skews toward an older HTTP-heavy crawl), so the
+        # feature taught the model an inverted, dataset-specific artifact
+        # rather than a real signal - it was scoring plain https://google.com
+        # as phishing. See url_classifier.py's module docstring note.
         "is_shortener": int(any(s in domain.lower() for s in SHORTENERS)),
         "subdomain_count": max(domain.count(".") - 1, 0),
         "entropy": shannon_entropy(url),
@@ -100,6 +116,10 @@ def extract_features(url: str) -> dict:
 
 # --- 1. Load data ---
 df = pd.read_csv(DATA_PATH)
+if AUGMENT_PATH.exists():
+    augment_df = pd.read_csv(AUGMENT_PATH)
+    df = pd.concat([df, augment_df], ignore_index=True)
+    print(f"Added {len(augment_df)} homepage-URL augmentation rows from {AUGMENT_PATH}")
 df = df.dropna(subset=["url", "status"])
 df = df.drop_duplicates(subset=["url"])
 
