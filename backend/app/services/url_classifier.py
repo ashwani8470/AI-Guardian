@@ -50,20 +50,67 @@ HIGH_RISK_WORDS = ["verify", "suspend", "password", "webscr", "confirm"]
 TRUSTED_TLDS = (".ac.in", ".edu", ".gov", ".edu.in", ".gov.in", ".nic.in")
 TRUSTED_DOMAINS = {"examly.io"}
 
-# Human-readable labels for reason codes. Only features with a label here
-# can ever surface as a reason - purely numeric/derived features without an
-# intuitive story are left out rather than shown as raw column names.
+# Direction-aware labels: each feature has a sentence for when it's cited as
+# evidence toward a PHISHING verdict (key 1) and one for when it's cited
+# toward a SAFE verdict (key 0). This avoids printing e.g. "does not use
+# HTTPS" next to a value showing it DOES use HTTPS - the old single-label
+# version assumed every citation was phishing-framed, which broke the moment
+# a feature got cited in support of a safe prediction.
 FEATURE_LABELS = {
-    "has_ip_address": "URL uses a raw IP address instead of a domain name",
-    "has_at_symbol": "URL contains an '@' symbol (can hide the real destination)",
-    "is_shortener": "URL uses a known link-shortening service",
-    "has_suspicious_word": "URL contains wording commonly used in phishing (login/verify/secure/etc.)",
-    "uses_https": "URL does not use HTTPS",
-    "subdomain_count": "URL has an unusually high number of subdomains",
-    "entropy": "URL has unusually random-looking characters",
-    "num_special_chars": "URL contains an unusual number of special characters",
-    "digit_ratio": "URL contains an unusually high proportion of digits",
-    "url_length": "URL is unusually long",
+    "has_ip_address": {
+        1: "URL uses a raw IP address instead of a domain name",
+        0: "URL uses a proper domain name, not a raw IP",
+    },
+    "has_at_symbol": {
+        1: "URL contains an '@' symbol (can hide the real destination)",
+        0: "URL does not contain a suspicious '@' symbol",
+    },
+    "is_shortener": {
+        1: "URL uses a known link-shortening service",
+        0: "URL does not use a link-shortening service",
+    },
+    "has_suspicious_word": {
+        1: "URL contains wording commonly used in phishing (login/verify/secure/etc.)",
+        0: "URL does not contain common phishing-related wording",
+    },
+    "uses_https": {
+        1: "URL does not use HTTPS",
+        0: "URL uses HTTPS",
+    },
+    "subdomain_count": {
+        1: "URL has an unusually high number of subdomains",
+        0: "URL has a typical number of subdomains",
+    },
+    "entropy": {
+        1: "URL has unusually random-looking characters",
+        0: "URL's characters don't look unusually random",
+    },
+    "num_special_chars": {
+        1: "URL contains an unusual number of special characters",
+        0: "URL doesn't contain an unusual number of special characters",
+    },
+    "digit_ratio": {
+        1: "URL contains an unusually high proportion of digits",
+        0: "URL doesn't contain an unusually high proportion of digits",
+    },
+    "url_length": {
+        1: "URL is unusually long",
+        0: "URL length looks typical",
+    },
+}
+
+# Rough, literature-informed thresholds used ONLY to decide whether a
+# continuous feature's actual value supports citing it as evidence toward a
+# PHISHING verdict. Being globally important to the model isn't the same as
+# this url's value looking unusual - without this check, a phishing
+# prediction would cite e.g. digit_ratio=0.0 as "unusually high", which is
+# false on its face regardless of what the model's overall decision was.
+CONTINUOUS_PHISHING_THRESHOLDS = {
+    "url_length": 54,
+    "subdomain_count": 3,
+    "entropy": 4.0,
+    "num_special_chars": 5,
+    "digit_ratio": 0.15,
 }
 
 
@@ -96,136 +143,3 @@ def extract_features(url: str) -> tuple[dict, str]:
     features = {
         "url_length": len(url),
         "domain_length": len(domain),
-        "path_length": len(path),
-        "query_length": len(query),
-        "num_dots": url.count("."),
-        "num_hyphens": url.count("-"),
-        "num_underscores": url.count("_"),
-        "num_slashes": url.count("/"),
-        "num_digits": digits,
-        "digit_ratio": digits / len(url) if url else 0.0,
-        "num_special_chars": len(re.findall(r"[^a-zA-Z0-9./:-]", url)),
-        "has_ip_address": int(bool(re.match(r"^(\d{1,3}\.){3}\d{1,3}", domain))),
-        "has_at_symbol": int("@" in url),
-        "uses_https": int(url.lower().startswith("https")),
-        "is_shortener": int(any(s in domain.lower() for s in SHORTENERS)),
-        "subdomain_count": max(domain.count(".") - 1, 0),
-        "entropy": shannon_entropy(url),
-        "has_suspicious_word": int(any(w in url.lower() for w in SUSPICIOUS_WORDS)),
-    }
-    return features, domain
-
-
-@lru_cache(maxsize=1)
-def _load_model():
-    """Loaded once per process, same pattern as email/text classifiers."""
-    model = joblib.load(MODEL_PATH)
-    feature_columns = joblib.load(FEATURES_PATH)
-    return model, feature_columns
-
-
-def _is_trusted_domain(domain: str, url: str) -> bool:
-    domain_lower = domain.lower()
-    if any(domain_lower.endswith(tld) for tld in TRUSTED_TLDS):
-        if not any(w in url.lower() for w in HIGH_RISK_WORDS):
-            return True
-    if domain_lower in TRUSTED_DOMAINS:
-        return True
-    return False
-
-
-def _build_reason_codes(model, feature_columns, feature_dict: dict, prediction: int) -> list[ReasonCode]:
-    """
-    Rank features by the model's global feature_importances_, then only
-    surface ones whose value on THIS url actually points toward the
-    predicted class - avoids citing e.g. "uses_https" on a URL that IS
-    https just because the feature is globally important overall.
-    """
-    importances = model.feature_importances_
-    ranked = sorted(zip(feature_columns, importances), key=lambda x: x[1], reverse=True)
-
-    reasons: list[ReasonCode] = []
-    for feature_name, importance in ranked:
-        if len(reasons) >= 3:
-            break
-        label = FEATURE_LABELS.get(feature_name)
-        if not label:
-            continue
-
-        value = feature_dict.get(feature_name)
-        if feature_name == "uses_https":
-            triggered = (value == 0) if prediction == 1 else (value == 1)
-        elif feature_name in ("entropy", "num_special_chars", "digit_ratio", "url_length", "subdomain_count"):
-            # Descriptive/continuous stats - only meaningful as context when
-            # the url was actually flagged.
-            triggered = prediction == 1
-        else:
-            triggered = bool(value) if prediction == 1 else not bool(value)
-
-        if triggered:
-            reasons.append(
-                ReasonCode(label=label, weight=round(float(importance), 3), detail=f"{feature_name}={value}")
-            )
-
-    if not reasons:
-        reasons.append(
-            ReasonCode(
-                label="Flagged by URL pattern model" if prediction == 1 else "No suspicious URL patterns detected",
-                weight=round(float(max(importances)), 3),
-                detail=None,
-            )
-        )
-    return reasons
-
-
-def predict_url(url: str) -> ScanResponse:
-    model, feature_columns = _load_model()
-    feature_dict, domain = extract_features(url)
-
-    if _is_trusted_domain(domain, url):
-        return ScanResponse(
-            scan_id=str(uuid.uuid4()),
-            modality="url",
-            risk_score=2,
-            risk_tier=RiskTier.SAFE,
-            reason_codes=[
-                ReasonCode(
-                    label="Trusted institutional domain",
-                    weight=1.0,
-                    detail=f"{domain} matches a trusted domain/TLD override",
-                )
-            ],
-            extracted_text=url,
-            confidence=0.95,
-        )
-
-    # Single-row DataFrame with the exact training column order - avoids a
-    # sklearn "X does not have valid feature names" warning that a bare
-    # list/array input would trigger, and guarantees correct column order
-    # regardless of dict insertion order.
-    feature_df = pd.DataFrame([feature_dict], columns=feature_columns)
-
-    proba = model.predict_proba(feature_df)[0]
-    prediction = int(model.predict(feature_df)[0])  # 0 = safe, 1 = phishing
-
-    risk_score = int(round(proba[1] * 100))
-    confidence = float(proba[prediction])
-
-    if risk_score <= 30:
-        risk_tier = RiskTier.SAFE
-    elif risk_score <= 70:
-        risk_tier = RiskTier.SUSPICIOUS
-    else:
-        risk_tier = RiskTier.DANGEROUS
-
-    reason_codes = _build_reason_codes(model, feature_columns, feature_dict, prediction)
-
-    return ScanResponse(
-        scan_id=str(uuid.uuid4()),
-        modality="url",
-        risk_score=risk_score,
-        risk_tier=risk_tier,
-        reason_codes=reason_codes,
-        extracted_text=url,
-        confidence=confidence,
-    )

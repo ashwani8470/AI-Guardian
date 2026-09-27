@@ -1,26 +1,25 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import Scan, ThreatReport, User
 from app.routers.auth import get_current_user
 from app.schemas import ScanResponse, ScreenshotScanRequest
-from app.utils import dummy_response
+from app.services.screenshot_classifier import predict_screenshot
 
 router = APIRouter(prefix="/predict/screenshot", tags=["screenshot"])
 
 
 @router.post("", response_model=ScanResponse)
-def predict_screenshot(
+def predict_screenshot_route(
     payload: ScreenshotScanRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ScanResponse:
-    """
-    TODO pipeline: OCR text extraction (Sparsh) -> fraud/forgery CV model
-    (Sparsh) -> NLP check on extracted text if relevant -> combined score.
-    """
-    result = dummy_response(modality="screenshot", extracted_text="[OCR output placeholder]")
+    try:
+        result = predict_screenshot(payload.image_base64)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     scan = Scan(
         id=result.scan_id,

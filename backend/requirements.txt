@@ -15,3 +15,9 @@ email-validator
 # ML inference (loading trained .joblib models from models/)
 scikit-learn
 joblib
+
+# QR decoding + screenshot OCR
+opencv-python-headless
+pytesseract
+Pillow
+numpy
