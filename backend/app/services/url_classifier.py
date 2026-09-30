@@ -50,6 +50,26 @@ HIGH_RISK_WORDS = ["verify", "suspend", "password", "webscr", "confirm"]
 TRUSTED_TLDS = (".ac.in", ".edu", ".gov", ".edu.in", ".gov.in", ".nic.in")
 TRUSTED_DOMAINS = {"examly.io"}
 
+# Exact-host allowlist of well-known sites (built from the same top-domain list
+# used for training augmentation - see models/trusted_domains.txt). EXACT match
+# only, never subdomains: attacker-controlled subdomains of big platforms
+# (x.blogspot.com, x.github.io, sites.google.com/...) must still go to the model.
+TRUSTED_HOSTS_PATH = MODELS_DIR / "trusted_domains.txt"
+
+
+@lru_cache(maxsize=1)
+def _load_trusted_hosts() -> frozenset:
+    if not TRUSTED_HOSTS_PATH.exists():
+        return frozenset()
+    hosts = {
+        line.strip().lower()
+        for line in TRUSTED_HOSTS_PATH.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    }
+    # Popular != safe to click: link shorteners hide the real destination, so
+    # they are never allowlisted even though they are top-10k domains.
+    return frozenset(h for h in hosts if not _is_shortener_host(h))
+
 # Direction-aware labels: each feature has a sentence for when it's cited as
 # evidence toward a PHISHING verdict (key 1) and one for when it's cited
 # toward a SAFE verdict (key 0). This avoids printing e.g. "does not use
@@ -127,10 +147,35 @@ def shannon_entropy(s: str) -> float:
     return -sum(p * math.log2(p) for p in probs)
 
 
+def normalize_url(url: str) -> str:
+    """Strip presentation differences that say nothing about safety.
+
+    The training data has systematic artifacts: scheme, a leading "www." and a
+    trailing "/" appear at very different rates in the safe vs phishing rows.
+    Because num_slashes / path_length carried ~47% of the model's weight, the
+    model learned "trailing slash = phishing" and scored https://www.google.com/
+    at 86 while https://www.google.com scored 35. Normalizing here (and in
+    training, which imports this same function) makes all spellings identical.
+    """
+    url = str(url).strip().strip("'\"")
+    url = re.sub(r"^https?://", "", url, flags=re.IGNORECASE)
+    url = re.sub(r"^www\d*\.", "", url, flags=re.IGNORECASE)
+    if re.fullmatch(r"[^/?#]+/+", url):  # bare host with only trailing slash(es)
+        url = url.rstrip("/")
+    return url
+
+
+def _is_shortener_host(domain: str) -> bool:
+    """Exact host (or subdomain) match. The old substring check ("t.co" in
+    domain) wrongly matched flipkart.com, microsoft.com, reddit.com, target.com..."""
+    host = domain.lower().split(":")[0]
+    return any(host == sh or host.endswith("." + sh) for sh in SHORTENERS)
+
+
 def extract_features(url: str) -> tuple[dict, str]:
-    """Returns (feature_dict, domain). Identical logic to train_url_model.py."""
-    url = str(url).strip()
-    parse_target = url if re.match(r"^https?://", url) else "http://" + url
+    """Returns (feature_dict, domain). Single source of truth: train_url_model.py imports this."""
+    url = normalize_url(url)
+    parse_target = "http://" + url
     try:
         parsed = urlparse(parse_target)
         domain = parsed.netloc
@@ -166,7 +211,7 @@ def extract_features(url: str) -> tuple[dict, str]:
         # so this feature taught the model an inverted, dataset-specific
         # artifact - it was scoring plain https://google.com as phishing.
         # Must stay dropped here in lockstep with train_url_model.py.
-        "is_shortener": int(any(s in domain.lower() for s in SHORTENERS)),
+        "is_shortener": int(_is_shortener_host(domain)),
         "subdomain_count": max(domain.count(".") - 1, 0),
         "entropy": shannon_entropy(url),
         "has_suspicious_word": int(any(w in url.lower() for w in SUSPICIOUS_WORDS)),
@@ -192,8 +237,11 @@ def _is_trusted(domain: str, url: str) -> bool:
     (e.g. a compromised .edu subdomain hosting a credential harvester)."""
     domain_lower = domain.lower()
     is_trusted_tld = any(domain_lower.endswith(tld) for tld in TRUSTED_TLDS)
-    is_trusted_domain = domain_lower in TRUSTED_DOMAINS or any(
-        domain_lower.endswith("." + d) for d in TRUSTED_DOMAINS
+    host = domain_lower.split(":")[0]
+    is_trusted_domain = (
+        domain_lower in TRUSTED_DOMAINS
+        or any(domain_lower.endswith("." + d) for d in TRUSTED_DOMAINS)
+        or host in _load_trusted_hosts()
     )
     if not (is_trusted_tld or is_trusted_domain):
         return False

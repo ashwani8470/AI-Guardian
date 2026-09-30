@@ -18,11 +18,8 @@ Output: models/url_model.joblib, models/url_vectorizer.joblib
         holder, kept for naming consistency with the text/email pipeline)
 """
 
-import math
-import re
-from collections import Counter
+import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import joblib
 import numpy as np
@@ -47,71 +44,15 @@ FEATURES_OUT = Path("models/url_feature_columns.joblib")
 
 RANDOM_STATE = 42
 
-SHORTENERS = {
-    "bit.ly", "tinyurl.com", "goo.gl", "t.co", "ow.ly", "is.gd",
-    "buff.ly", "adf.ly", "bit.do", "rb.gy", "cutt.ly",
-}
 
-SUSPICIOUS_WORDS = [
-    "login", "verify", "secure", "account", "update", "confirm",
-    "bank", "signin", "webscr", "password", "suspend",
-]
-
-
-def shannon_entropy(s: str) -> float:
-    if not s:
-        return 0.0
-    counts = Counter(s)
-    probs = [c / len(s) for c in counts.values()]
-    return -sum(p * math.log2(p) for p in probs)
+# Single source of truth for feature extraction: training imports the exact
+# function used at inference time, so the two can never drift apart again.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+from app.services.url_classifier import extract_features as _extract  # noqa: E402
 
 
 def extract_features(url: str) -> dict:
-    url = str(url).strip()
-    # Ensure a scheme so urlparse extracts netloc/path correctly
-    parse_target = url if re.match(r"^https?://", url) else "http://" + url
-    try:
-        parsed = urlparse(parse_target)
-        domain = parsed.netloc
-        path = parsed.path or ""
-        query = parsed.query or ""
-    except ValueError:
-        # Malformed URL (e.g. broken IPv6-looking brackets) - fall back to
-        # treating the whole string as an opaque domain so training/inference
-        # doesn't crash on a handful of garbage rows.
-        domain = url
-        path = ""
-        query = ""
-
-    digits = sum(c.isdigit() for c in url)
-    letters = sum(c.isalpha() for c in url)
-
-    return {
-        "url_length": len(url),
-        "domain_length": len(domain),
-        "path_length": len(path),
-        "query_length": len(query),
-        "num_dots": url.count("."),
-        "num_hyphens": url.count("-"),
-        "num_underscores": url.count("_"),
-        "num_slashes": url.count("/"),
-        "num_digits": digits,
-        "digit_ratio": digits / len(url) if url else 0.0,
-        "num_special_chars": len(re.findall(r"[^a-zA-Z0-9./:-]", url)),
-        "has_ip_address": int(bool(re.match(r"^(\d{1,3}\.){3}\d{1,3}", domain))),
-        "has_at_symbol": int("@" in url),
-        # uses_https deliberately dropped: in this dataset phishing URLs use
-        # HTTPS ~10x more often than the "legit" sample (free-hosting
-        # platforms like godaddysites.com serve HTTPS by default, while the
-        # legit sample skews toward an older HTTP-heavy crawl), so the
-        # feature taught the model an inverted, dataset-specific artifact
-        # rather than a real signal - it was scoring plain https://google.com
-        # as phishing. See url_classifier.py's module docstring note.
-        "is_shortener": int(any(s in domain.lower() for s in SHORTENERS)),
-        "subdomain_count": max(domain.count(".") - 1, 0),
-        "entropy": shannon_entropy(url),
-        "has_suspicious_word": int(any(w in url.lower() for w in SUSPICIOUS_WORDS)),
-    }
+    return _extract(url)[0]
 
 
 # --- 1. Load data ---
