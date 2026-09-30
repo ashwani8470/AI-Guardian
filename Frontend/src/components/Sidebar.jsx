@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import ShieldMark from "./ShieldMark";
 import { useAuth } from "../context/AuthContext";
 
@@ -72,6 +72,12 @@ function ToggleIcon({ collapsed }) {
 
 export default function Sidebar() {
   const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate("/", { replace: true }); // back to the main landing page
+  }
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -116,7 +122,7 @@ export default function Sidebar() {
 
       <div className="border-t border-hairline p-3">
         <button
-          onClick={logout}
+          onClick={handleLogout}
           title="Log out"
           className={[
             "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-textSecondary transition-colors hover:bg-surfaceRaised/60 hover:text-textPrimary",
