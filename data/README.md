@@ -1,16 +1,12 @@
 # data/
 
-Raw training datasets go here (not committed to git — see below).
+Raw training datasets. The large CSVs are git-ignored; download them and place them here.
 
-- `emails.csv` — download from https://www.kaggle.com/datasets/subhajournal/phishingemails
-  Columns: `Email Text`, `Email Type` (values: "Phishing Email" / "Safe Email")
-  Used by `models/train_email_model.py`.
+| File | Source | Used by |
+|---|---|---|
+| `emails.csv` | https://www.kaggle.com/datasets/subhajournal/phishingemails (columns `Email Text`, `Email Type`) | `models/train_email_model.py` |
+| `sms.csv` | UCI SMS Spam Collection (5,572 messages) | `models/train_text_model.py` |
+| `urls.csv` | https://www.kaggle.com/datasets/harisudhan411/phishing-and-legitimate-urls (columns `url`, `status`; raw `status=1` = legitimate) | `models/train_url_model.py` |
+| `urls_augment.csv` | ~30K homepage URLs of well-known sites, all labeled legitimate. **Committed to git.** | `models/train_url_model.py` (optional) |
 
-- `messages.csv` — UCI SMS Spam Collection (reused from the mini-project), for the
-  upcoming text/SMS classifier.
-
-- `urls.csv` — harisudhan411/phishing-and-legitimate-urls (reused from the mini-project),
-  for the upcoming URL classifier.
-
-Add `*.csv` to `.gitignore` if you don't want raw datasets committed to the repo
-(they can be large and are easy to re-download).
+`urls_augment.csv` exists because the base URL dataset's legitimate class is mostly deep article links, so plain homepages were wrongly flagged. The same list seeds `models/trusted_domains.txt`.

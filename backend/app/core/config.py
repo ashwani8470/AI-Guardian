@@ -31,3 +31,15 @@ SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "AI Guardian")
+
+# --- CORS ---
+# Comma-separated list of frontend origins allowed to call this API.
+# Vite's dev server defaults to port 5173. If Vite picks another port (e.g.
+# 5174 because 5173 is busy) add it in .env: CORS_ORIGINS=http://localhost:5174
+CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if o.strip()
+]

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import CORS_ORIGINS
 from app.db.database import Base, engine
 from app.routers import auth, email, history, qr, screenshot, text, url
 
@@ -14,10 +15,11 @@ app = FastAPI(
 # project; a real deployment would use Alembic migrations instead.
 Base.metadata.create_all(bind=engine)
 
-# TODO: restrict allow_origins to the actual dashboard/app origin before deploying
+# Only the configured frontend origins may call the API from a browser
+# (see CORS_ORIGINS in app/core/config.py / .env).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
