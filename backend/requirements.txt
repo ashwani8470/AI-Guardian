@@ -11,13 +11,15 @@ psycopg2-binary
 python-jose[cryptography]
 bcrypt
 email-validator
-
 # ML inference (loading trained .joblib models from models/)
-scikit-learn
-joblib
+# Pinned: the .joblib models were saved with scikit-learn 1.9.1 and may not
+# load correctly under other versions.
+scikit-learn==1.9.1
+joblib==1.6.0
+numpy==2.5.3
+pandas==3.0.5
 
 # QR decoding + screenshot OCR
-opencv-python-headless
-pytesseract
-Pillow
-numpy
+opencv-python-headless==5.0.0.93
+pytesseract==0.3.13
+Pillow==12.3.0
