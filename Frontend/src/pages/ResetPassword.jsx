@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import PasswordInput from "../components/PasswordInput";
 import ShieldMark from "../components/ShieldMark";
 
 export default function ResetPassword() {
@@ -68,28 +69,22 @@ export default function ResetPassword() {
                 <label className="block text-sm text-textSecondary" htmlFor="password">
                   New password
                 </label>
-                <input
-                  id="password"
-                  type="password"
+                <PasswordInput id="password"
                   required
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
                 />
               </div>
               <div>
                 <label className="block text-sm text-textSecondary" htmlFor="confirmPassword">
                   Confirm new password
                 </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
+                <PasswordInput id="confirmPassword"
                   required
                   minLength={8}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
                 />
               </div>
 

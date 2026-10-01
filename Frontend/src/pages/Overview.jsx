@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useT } from "../i18n";
+import { usePrefs } from "../context/PrefsContext";
 
 function TextIcon(props) {
   return (
@@ -57,53 +59,43 @@ function ScreenshotIcon(props) {
   );
 }
 
+function BulkIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" {...props}>
+      <path d="M8 6h12M8 12h12M8 18h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// `advanced` tiles are hidden in simple mode (fewer options).
 const TILES = [
-  {
-    to: "/app/scan/text",
-    title: "Text & SMS",
-    body: "Paste a message to check for scam language.",
-    Icon: TextIcon,
-  },
-  {
-    to: "/app/scan/email",
-    title: "Email",
-    body: "Check a suspicious email before you click anything.",
-    Icon: EmailIcon,
-  },
-  {
-    to: "/app/scan/url",
-    title: "Links & URLs",
-    body: "See if a link leads somewhere it shouldn't.",
-    Icon: LinkIcon,
-  },
-  {
-    to: "/app/scan/qr",
-    title: "QR codes",
-    body: "Upload a QR code image before you scan it in real life.",
-    Icon: QrIcon,
-  },
-  {
-    to: "/app/scan/screenshot",
-    title: "Payment screenshot",
-    body: "Check a payment request or receipt screenshot.",
-    Icon: ScreenshotIcon,
-  },
+  { to: "/app/scan/text", key: "text", Icon: TextIcon },
+  { to: "/app/scan/url", key: "url", Icon: LinkIcon },
+  { to: "/app/scan/qr", key: "qr", Icon: QrIcon },
+  { to: "/app/scan/screenshot", key: "screenshot", Icon: ScreenshotIcon },
+  { to: "/app/scan/email", key: "email", Icon: EmailIcon, advanced: true },
+  { to: "/app/scan/bulk", key: "bulk", Icon: BulkIcon, advanced: true },
 ];
 
 export default function Overview() {
+  const t = useT();
+  const { simple } = usePrefs();
+  const tiles = simple ? TILES.filter((tile) => !tile.advanced) : TILES;
+
   return (
     <div>
       <div className="rounded-lg border border-hairline bg-gradient-to-br from-surface to-surfaceRaised px-6 py-8">
         <h1 className="font-display text-2xl font-semibold text-textPrimary sm:text-3xl">
-          What do you want to check today?
+          {t("overview.title")}
         </h1>
         <p className="mt-2 max-w-lg text-sm text-textSecondary">
-          Pick a scan type below, or review what you've already checked in your history.
+          {t("overview.subtitle")}
         </p>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {TILES.map(({ to, title, body, Icon }) => (
+      <div className={`mt-6 grid grid-cols-1 gap-4 ${simple ? "" : "sm:grid-cols-2"}`}>
+        {tiles.map(({ to, key, Icon }) => (
           <Link
             key={to}
             to={to}
@@ -113,11 +105,11 @@ export default function Overview() {
               <Icon className="h-5 w-5" />
             </div>
             <h2 className="mt-4 font-display text-base font-semibold text-textPrimary group-hover:text-brand">
-              {title}
+              {t(`tile.${key}.title`)}
             </h2>
-            <p className="mt-1 text-sm text-textSecondary">{body}</p>
+            <p className="mt-1 text-sm text-textSecondary">{t(`tile.${key}.body`)}</p>
             <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-brand opacity-0 transition-opacity group-hover:opacity-100">
-              Check now →
+              {t("overview.checkNow")}
             </span>
           </Link>
         ))}

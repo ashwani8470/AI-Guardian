@@ -15,3 +15,10 @@ body {
   outline: 2px solid #3DDC97;
   outline-offset: 2px;
 }
+
+/* We render our own show/hide button; hide Edge's built-in reveal/clear icons. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
+
+/* Simple mode: everything is sized in rem, so scaling the root enlarges the whole UI. */
+html.simple { font-size: 125%; }

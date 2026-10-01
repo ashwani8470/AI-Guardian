@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
-
-const GENDER_LABELS = {
-  male: "Male",
-  female: "Female",
-  other: "Other",
-};
+import DataControls from "../components/DataControls";
+import { useT } from "../i18n";
 
 export default function Account() {
   const { updateUser } = useAuth();
+  const t = useT();
+  const genderLabel = (g) => (g ? t(`account.${g}`) : "—");
 
   const [mode, setMode] = useState("view"); // "view" | "edit"
   const [profile, setProfile] = useState(null);
@@ -96,8 +94,8 @@ export default function Account() {
   if (loading) {
     return (
       <div>
-        <h1 className="font-display text-2xl font-semibold text-textPrimary">My account</h1>
-        <p className="mt-4 text-sm text-textSecondary">Loading…</p>
+        <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("nav.account")}</h1>
+        <p className="mt-4 text-sm text-textSecondary">{t("common.loading")}</p>
       </div>
     );
   }
@@ -105,30 +103,30 @@ export default function Account() {
   if (mode === "view") {
     return (
       <div>
-        <h1 className="font-display text-2xl font-semibold text-textPrimary">My account</h1>
-        <p className="mt-1 text-sm text-textSecondary">Your account details.</p>
+        <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("nav.account")}</h1>
+        <p className="mt-1 text-sm text-textSecondary">{t("account.subtitle")}</p>
 
         <div className="mt-8 max-w-md space-y-4 rounded-md border border-hairline bg-surface p-5">
           <div>
-            <p className="text-xs uppercase tracking-wide text-textSecondary/70">Name</p>
+            <p className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.name")}</p>
             <p className="mt-1 text-sm text-textPrimary">{profile?.name || "—"}</p>
           </div>
           <div className="border-t border-hairline pt-4">
-            <p className="text-xs uppercase tracking-wide text-textSecondary/70">Email</p>
+            <p className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.email")}</p>
             <p className="mt-1 text-sm text-textPrimary">{profile?.email || "—"}</p>
           </div>
           <div className="border-t border-hairline pt-4">
-            <p className="text-xs uppercase tracking-wide text-textSecondary/70">Phone number</p>
+            <p className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.phone")}</p>
             <p className="mt-1 text-sm text-textPrimary">{profile?.phone_number || "—"}</p>
           </div>
           <div className="border-t border-hairline pt-4">
-            <p className="text-xs uppercase tracking-wide text-textSecondary/70">Gender</p>
+            <p className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.gender")}</p>
             <p className="mt-1 text-sm text-textPrimary">
-              {GENDER_LABELS[profile?.gender] || "—"}
+              {genderLabel(profile?.gender)}
             </p>
           </div>
           <div className="border-t border-hairline pt-4">
-            <p className="text-xs uppercase tracking-wide text-textSecondary/70">Address</p>
+            <p className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.address")}</p>
             <p className="mt-1 whitespace-pre-wrap text-sm text-textPrimary">
               {profile?.address || "—"}
             </p>
@@ -139,25 +137,27 @@ export default function Account() {
 
         <button
           onClick={startEdit}
-          className="mt-4 rounded bg-primary px-4 py-2 text-sm font-medium text-white"
+          className="mt-4 rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90"
         >
-          Edit profile
+          {t("account.edit")}
         </button>
+
+        <DataControls />
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-textPrimary">My account</h1>
-      <p className="mt-1 text-sm text-textSecondary">Edit your account details.</p>
+      <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("nav.account")}</h1>
+      <p className="mt-1 text-sm text-textSecondary">{t("account.editSubtitle")}</p>
 
       <form
         onSubmit={handleSubmit}
         className="mt-8 max-w-md space-y-4 rounded-md border border-hairline bg-surface p-5"
       >
         <div>
-          <label className="text-xs uppercase tracking-wide text-textSecondary/70">Name</label>
+          <label className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.name")}</label>
           <input
             type="text"
             value={form.name}
@@ -167,14 +167,14 @@ export default function Account() {
         </div>
 
         <div className="border-t border-hairline pt-4">
-          <label className="text-xs uppercase tracking-wide text-textSecondary/70">Email</label>
+          <label className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.email")}</label>
           <p className="mt-1 text-sm text-textPrimary">{profile?.email}</p>
-          <p className="mt-1 text-xs text-textSecondary/60">Email can't be changed here yet.</p>
+          <p className="mt-1 text-xs text-textSecondary/60">{t("account.emailNote")}</p>
         </div>
 
         <div className="border-t border-hairline pt-4">
           <label className="text-xs uppercase tracking-wide text-textSecondary/70">
-            Phone number
+            {t("account.phone")}
           </label>
           <input
             type="tel"
@@ -185,21 +185,21 @@ export default function Account() {
         </div>
 
         <div className="border-t border-hairline pt-4">
-          <label className="text-xs uppercase tracking-wide text-textSecondary/70">Gender</label>
+          <label className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.gender")}</label>
           <select
             value={form.gender}
             onChange={handleChange("gender")}
             className="mt-1 w-full rounded border border-hairline bg-transparent px-3 py-2 text-sm text-textPrimary"
           >
-            <option value="">Prefer not to say</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
+            <option value="">{t("account.preferNot")}</option>
+            <option value="male">{t("account.male")}</option>
+            <option value="female">{t("account.female")}</option>
+            <option value="other">{t("account.other")}</option>
           </select>
         </div>
 
         <div className="border-t border-hairline pt-4">
-          <label className="text-xs uppercase tracking-wide text-textSecondary/70">Address</label>
+          <label className="text-xs uppercase tracking-wide text-textSecondary/70">{t("account.address")}</label>
           <textarea
             value={form.address}
             onChange={handleChange("address")}
@@ -214,9 +214,9 @@ export default function Account() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? t("account.saving") : t("account.save")}
           </button>
           <button
             type="button"
@@ -224,7 +224,7 @@ export default function Account() {
             disabled={saving}
             className="rounded border border-hairline px-4 py-2 text-sm font-medium text-textSecondary hover:text-textPrimary disabled:opacity-50"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

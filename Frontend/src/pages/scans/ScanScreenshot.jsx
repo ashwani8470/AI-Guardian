@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { api, fileToBase64 } from "../../api/client";
 import BackLink from "../../components/BackLink";
+import { useT } from "../../i18n";
 import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
 import ImageDropInput from "../../components/ImageDropInput";
 
 export default function ScanScreenshot() {
+  const t = useT();
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -37,9 +39,9 @@ export default function ScanScreenshot() {
   return (
     <div>
       <BackLink />
-      <h1 className="font-display text-2xl font-semibold text-textPrimary">Check a payment screenshot</h1>
+      <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("shot.title")}</h1>
       <p className="mt-1 text-sm text-textSecondary">
-        Upload a screenshot of a payment request, receipt, or transfer confirmation.
+        {t("shot.subtitle")}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -57,11 +59,11 @@ export default function ScanScreenshot() {
           disabled={loading || !file}
           className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {loading ? "Checking…" : "Check screenshot"}
+          {loading ? t("common.checking") : t("shot.button")}
         </button>
         {(file || result || error) && (
             <button type="button" onClick={handleClear} disabled={loading} className="rounded-md border border-hairline px-4 py-2 text-sm text-textSecondary transition-colors hover:text-textPrimary disabled:opacity-60">
-              Clear
+              {t("common.clear")}
             </button>
           )}
         </div>
@@ -73,10 +75,10 @@ export default function ScanScreenshot() {
         <div className="mt-6">
           <ScanLoadingSteps
             steps={[
-              "Uploading image…",
-              "Extracting text…",
-              "Running the classifier…",
-              "Scoring risk…",
+              t("steps.upload"),
+              t("steps.extract"),
+              t("steps.classifier"),
+              t("steps.score"),
             ]}
           />
         </div>

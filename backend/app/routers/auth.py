@@ -15,8 +15,9 @@ from app.core.security import (
     verify_password,
 )
 from app.db.database import get_db
-from app.db.models import PasswordResetToken, User
+from app.db.models import PasswordResetToken, Scan, ThreatReport, User
 from app.schemas import (
+    DeleteAccountRequest,
     ForgotPasswordRequest,
     MessageResponse,
     ResetPasswordRequest,
@@ -176,3 +177,29 @@ def update_profile(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/delete-account", response_model=MessageResponse)
+def delete_account(
+    payload: DeleteAccountRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Permanently deletes the account and everything tied to it (scans, reason codes,
+    reset tokens). Requires the current password so a stolen/left-open session
+    can't wipe an account on its own.
+    """
+    if not verify_password(payload.password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
+
+    scan_ids = [row[0] for row in db.query(Scan.id).filter(Scan.user_id == current_user.id).all()]
+    if scan_ids:
+        db.query(ThreatReport).filter(ThreatReport.scan_id.in_(scan_ids)).delete(synchronize_session=False)
+        db.query(Scan).filter(Scan.id.in_(scan_ids)).delete(synchronize_session=False)
+    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == current_user.id).delete(
+        synchronize_session=False
+    )
+    db.delete(current_user)
+    db.commit()
+    return MessageResponse(message="Your account and all your data have been deleted.")

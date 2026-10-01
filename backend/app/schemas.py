@@ -97,6 +97,10 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8)
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
 class MessageResponse(BaseModel):
     message: str
 

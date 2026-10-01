@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useT } from "../i18n";
 
 export default function ImageDropInput({ file, onChange }) {
+  const t = useT();
   const inputRef = useRef(null);
 
   // Preview is derived from the `file` prop, so clearing the file from the
@@ -38,8 +40,8 @@ export default function ImageDropInput({ file, onChange }) {
       {file && (
         <button
           type="button"
-          title="Remove image"
-          aria-label="Remove image"
+          title={t("common.removeImage")}
+          aria-label={t("common.removeImage")}
           onClick={(e) => {
             e.stopPropagation(); // don't reopen the file picker
             onChange(null);
@@ -55,8 +57,8 @@ export default function ImageDropInput({ file, onChange }) {
         <img src={preview} alt="Selected file preview" className="mx-auto max-h-48 rounded-md" />
       ) : (
         <>
-          <p className="text-sm text-textPrimary">Click to upload, or drag an image here</p>
-          <p className="mt-1 text-xs text-textSecondary">PNG or JPG</p>
+          <p className="text-sm text-textPrimary">{t("common.dropHere")}</p>
+          <p className="mt-1 text-xs text-textSecondary">{t("common.imageTypes")}</p>
         </>
       )}
       {file && <p className="mt-3 text-xs text-textSecondary">{file.name}</p>}

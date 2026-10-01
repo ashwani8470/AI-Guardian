@@ -23,6 +23,9 @@ def predict_url(
     preprocessing) before passing to the classifier.
     """
     result = classify_url(payload.url)
+    # Keep the full URL the user checked (the classifier only returns the domain),
+    # so the History detail view can show exactly what was scanned.
+    result.extracted_text = payload.url.strip()[:2000]
 
     scan = Scan(
         id=result.scan_id,

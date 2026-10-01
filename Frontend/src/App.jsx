@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { PrefsProvider } from "./context/PrefsContext";
 import RequireAuth from "./components/RequireAuth";
 
 import Home from "./pages/Home";
@@ -16,9 +17,11 @@ import ScanUrl from "./pages/scans/ScanUrl";
 import ScanEmail from "./pages/scans/ScanEmail";
 import ScanQr from "./pages/scans/ScanQr";
 import ScanScreenshot from "./pages/scans/ScanScreenshot";
+import ScanBulk from "./pages/scans/ScanBulk";
 
 export default function App() {
   return (
+    <PrefsProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -44,11 +47,13 @@ export default function App() {
             <Route path="scan/email" element={<ScanEmail />} />
             <Route path="scan/qr" element={<ScanQr />} />
             <Route path="scan/screenshot" element={<ScanScreenshot />} />
+            <Route path="scan/bulk" element={<ScanBulk />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </PrefsProvider>
   );
 }

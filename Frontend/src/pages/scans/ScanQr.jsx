@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { api, fileToBase64 } from "../../api/client";
 import BackLink from "../../components/BackLink";
+import { useT } from "../../i18n";
 import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
 import ImageDropInput from "../../components/ImageDropInput";
 
 export default function ScanQr() {
+  const t = useT();
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -37,9 +39,9 @@ export default function ScanQr() {
   return (
     <div>
       <BackLink />
-      <h1 className="font-display text-2xl font-semibold text-textPrimary">Check a QR code</h1>
+      <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("qr.title")}</h1>
       <p className="mt-1 text-sm text-textSecondary">
-        Upload a photo or screenshot of the QR code before you scan it.
+        {t("qr.subtitle")}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -57,11 +59,11 @@ export default function ScanQr() {
           disabled={loading || !file}
           className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {loading ? "Checking…" : "Check QR code"}
+          {loading ? t("common.checking") : t("qr.button")}
         </button>
         {(file || result || error) && (
             <button type="button" onClick={handleClear} disabled={loading} className="rounded-md border border-hairline px-4 py-2 text-sm text-textSecondary transition-colors hover:text-textPrimary disabled:opacity-60">
-              Clear
+              {t("common.clear")}
             </button>
           )}
         </div>
@@ -73,10 +75,10 @@ export default function ScanQr() {
         <div className="mt-6">
           <ScanLoadingSteps
             steps={[
-              "Uploading image…",
-              "Decoding the QR code…",
-              "Checking the link inside…",
-              "Scoring risk…",
+              t("steps.upload"),
+              t("steps.decodeQr"),
+              t("steps.linkInside"),
+              t("steps.score"),
             ]}
           />
         </div>

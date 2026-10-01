@@ -59,6 +59,19 @@ export const api = {
     request("/predict/screenshot", { method: "POST", body: { image_base64: imageBase64 } }),
 
   getHistory: () => request("/scans", { method: "GET" }),
+  deleteHistory: () => request("/scans", { method: "DELETE" }),
+  deleteAccount: (password) =>
+    request("/auth/delete-account", { method: "POST", body: { password } }),
+
+  // CSV download needs the auth header, so it is fetched as a blob (a plain
+  // <a href> link can't send the token).
+  async downloadHistoryCsv() {
+    const res = await fetch(`${BASE_URL}/scans/export`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (!res.ok) throw new Error(`Download failed (${res.status})`);
+    return res.blob();
+  },
 };
 
 export function setToken(token) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 import ShieldMark from "../components/ShieldMark";
 
 export default function Signup() {
@@ -63,14 +64,11 @@ export default function Signup() {
             <label className="block text-sm text-textSecondary" htmlFor="password">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
+            <PasswordInput id="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
             />
           </div>
 

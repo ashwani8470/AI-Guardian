@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import ScanDetailModal from "../components/ScanDetailModal";
+import { useT } from "../i18n";
+import { usePrefs } from "../context/PrefsContext";
+import { formatServerDate } from "../utils/dates";
+import { normalizeTier } from "../utils/verdict";
 
 const TIER_DOT = {
   safe: "bg-safe",
@@ -8,9 +13,12 @@ const TIER_DOT = {
 };
 
 export default function History() {
+  const t = useT();
+  const { lang } = usePrefs();
   const [scans, setScans] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     api
@@ -22,44 +30,55 @@ export default function History() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-textPrimary">Scan history</h1>
-      <p className="mt-1 text-sm text-textSecondary">Everything you've checked, most recent first.</p>
+      <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("history.title")}</h1>
+      <p className="mt-1 text-sm text-textSecondary">{t("history.subtitle")}</p>
 
-      {loading && <p className="mt-6 text-sm text-textSecondary">Loading…</p>}
+      {loading && <p className="mt-6 text-sm text-textSecondary">{t("common.loading")}</p>}
       {error && <p className="mt-6 text-sm text-dangerous">{error}</p>}
 
       {!loading && !error && scans.length === 0 && (
-        <p className="mt-6 text-sm text-textSecondary">
-          Nothing checked yet — run a scan from the sidebar to see it here.
-        </p>
+        <p className="mt-6 text-sm text-textSecondary">{t("history.empty")}</p>
       )}
 
       {!loading && scans.length > 0 && (
-        <div className="mt-6 overflow-hidden rounded-md border border-hairline">
-          <table className="w-full text-left text-sm">
+        <div className="mt-6 overflow-x-auto rounded-md border border-hairline">
+          <table className="w-full min-w-[28rem] text-left text-sm">
             <thead className="bg-surface text-textSecondary">
               <tr>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Result</th>
-                <th className="px-4 py-3 font-medium">Score</th>
-                <th className="px-4 py-3 font-medium">When</th>
+                <th className="px-4 py-3 font-medium">{t("history.type")}</th>
+                <th className="px-4 py-3 font-medium">{t("history.result")}</th>
+                <th className="px-4 py-3 font-medium">{t("history.score")}</th>
+                <th className="px-4 py-3 font-medium">{t("history.when")}</th>
               </tr>
             </thead>
             <tbody>
               {scans.map((scan, i) => {
-                const tier = (scan.risk_tier || "suspicious").toLowerCase();
+                const tier = normalizeTier(scan.risk_tier, scan.risk_score);
+                const modality = scan.modality || scan.scan_type || scan.type;
                 return (
-                  <tr key={scan.id || i} className="border-t border-hairline bg-ink">
-                    <td className="px-4 py-3 text-textPrimary">{scan.scan_type || scan.type}</td>
+                  <tr
+                    key={scan.scan_id || scan.id || i}
+                    tabIndex={0}
+                    role="button"
+                    onClick={() => setSelected(scan)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelected(scan);
+                      }
+                    }}
+                    className="cursor-pointer border-t border-hairline bg-ink transition-colors hover:bg-surface focus:bg-surface focus:outline-none"
+                  >
+                    <td className="px-4 py-3 text-textPrimary">{t(`type.${modality}`)}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-2 text-textPrimary">
                         <span className={`h-1.5 w-1.5 rounded-full ${TIER_DOT[tier] || TIER_DOT.suspicious}`} />
-                        {tier}
+                        {t(`tier.${tier}`)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-textSecondary">{scan.risk_score ?? "—"}</td>
                     <td className="px-4 py-3 text-textSecondary">
-                      {scan.timestamp ? new Date(scan.timestamp).toLocaleString() : "—"}
+                      {formatServerDate(scan.created_at || scan.timestamp, lang)}
                     </td>
                   </tr>
                 );
@@ -68,6 +87,8 @@ export default function History() {
           </table>
         </div>
       )}
+
+      {selected && <ScanDetailModal result={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }

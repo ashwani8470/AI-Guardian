@@ -1,10 +1,26 @@
 import { useState } from "react";
 import { api } from "../../api/client";
 import BackLink from "../../components/BackLink";
+import { useT } from "../../i18n";
+import ExampleChips from "../../components/ExampleChips";
 import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
 
+const EXAMPLES = [
+  {
+    labelKey: "ex.suspended",
+    subject: "Urgent: Your account has been suspended",
+    body: "Dear user, we detected unusual activity. Your account will be closed within 24 hours unless you verify your password here: http://secure-login-verify.top/account. Failure to act will result in permanent suspension.",
+  },
+  {
+    labelKey: "ex.normalEmail",
+    subject: "Assignment submission reminder",
+    body: "Hi all, a reminder that the DBMS assignment is due on Friday. Please upload your PDF on the portal before 5 pm. Thanks.",
+  },
+];
+
 export default function ScanEmail() {
+  const t = useT();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [result, setResult] = useState(null);
@@ -14,6 +30,13 @@ export default function ScanEmail() {
   function handleClear() {
     setSubject("");
     setBody("");
+    setResult(null);
+    setError("");
+  }
+
+  function handleExample(ex) {
+    setSubject(ex.subject);
+    setBody(ex.body);
     setResult(null);
     setError("");
   }
@@ -36,9 +59,9 @@ export default function ScanEmail() {
   return (
     <div>
       <BackLink />
-      <h1 className="font-display text-2xl font-semibold text-textPrimary">Check an email</h1>
+      <h1 className="font-display text-2xl font-semibold text-textPrimary">{t("email.title")}</h1>
       <p className="mt-1 text-sm text-textSecondary">
-        Paste the subject and body of the email you want checked.
+        {t("email.subtitle")}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -46,7 +69,7 @@ export default function ScanEmail() {
           type="text"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          placeholder="Subject line"
+          placeholder={t("email.subject")}
           className="w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
         />
         <textarea
@@ -54,20 +77,21 @@ export default function ScanEmail() {
           onChange={(e) => setBody(e.target.value)}
           required
           rows={6}
-          placeholder="Paste the email body here…"
+          placeholder={t("email.placeholder")}
           className="w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
         />
+        <ExampleChips examples={EXAMPLES} onPick={handleExample} disabled={loading} />
         <div className="flex gap-3">
           <button
             type="submit"
             disabled={loading}
             className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
           >
-            {loading ? "Checking…" : "Check email"}
+            {loading ? t("common.checking") : t("email.button")}
           </button>
           {(subject || body || result || error) && (
             <button type="button" onClick={handleClear} disabled={loading} className="rounded-md border border-hairline px-4 py-2 text-sm text-textSecondary transition-colors hover:text-textPrimary disabled:opacity-60">
-              Clear
+              {t("common.clear")}
             </button>
           )}
         </div>
@@ -78,7 +102,7 @@ export default function ScanEmail() {
       {loading && (
         <div className="mt-6">
           <ScanLoadingSteps
-            steps={["Reading the email…", "Checking wording and structure…", "Scoring risk…"]}
+            steps={[t("steps.readEmail"), t("steps.wording"), t("steps.score")]}
           />
         </div>
       )}
