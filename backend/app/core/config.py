@@ -43,3 +43,7 @@ CORS_ORIGINS = [
     ).split(",")
     if o.strip()
 ]
+
+# --- Sample (guest) mode ---
+# How many example scans a visitor can run without an account, across all features.
+DEMO_SCAN_LIMIT = int(os.getenv("DEMO_SCAN_LIMIT", "3"))

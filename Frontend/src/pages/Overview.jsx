@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useT } from "../i18n";
 import { usePrefs } from "../context/PrefsContext";
+import { useAuth } from "../context/AuthContext";
 
 function TextIcon(props) {
   return (
@@ -81,7 +82,9 @@ const TILES = [
 export default function Overview() {
   const t = useT();
   const { simple } = usePrefs();
-  const tiles = simple ? TILES.filter((tile) => !tile.advanced) : TILES;
+  const { isGuest } = useAuth();
+  // Bulk checking needs an account; simple mode hides the "advanced" tiles.
+  const tiles = TILES.filter((tile) => !(simple && tile.advanced) && !(isGuest && tile.key === "bulk"));
 
   return (
     <div>

@@ -7,11 +7,11 @@ returns data in the same shape — that's what makes the Android app and
 dashboard simple to build.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class RiskTier(str, Enum):
@@ -29,31 +29,31 @@ class ReasonCode(BaseModel):
 
 # ---- Request models (one per modality) ----
 
-class TextScanRequest(BaseModel):
-    content: str = Field(..., description="Raw SMS/chat text to analyze")
-    user_id: Optional[str] = None
+class _ScanRequest(BaseModel):
+    """Base for scan requests: whitespace is trimmed so '   ' counts as empty."""
+    model_config = ConfigDict(str_strip_whitespace=True)
 
 
-class UrlScanRequest(BaseModel):
-    url: str
-    user_id: Optional[str] = None
+class TextScanRequest(_ScanRequest):
+    content: str = Field(..., min_length=1, max_length=10000, description="Raw SMS/chat text to analyze")
 
 
-class EmailScanRequest(BaseModel):
-    subject: Optional[str] = None
-    body: str
+class UrlScanRequest(_ScanRequest):
+    url: str = Field(..., min_length=1, max_length=2000)
+
+
+class EmailScanRequest(_ScanRequest):
+    subject: Optional[str] = Field(None, max_length=500)
+    body: str = Field(..., min_length=1, max_length=20000)
     sender: Optional[str] = None
-    user_id: Optional[str] = None
 
 
-class QrScanRequest(BaseModel):
-    image_base64: str = Field(..., description="Base64-encoded QR code image")
-    user_id: Optional[str] = None
+class QrScanRequest(_ScanRequest):
+    image_base64: str = Field(..., min_length=1, description="Base64-encoded QR code image")
 
 
-class ScreenshotScanRequest(BaseModel):
-    image_base64: str = Field(..., description="Base64-encoded screenshot")
-    user_id: Optional[str] = None
+class ScreenshotScanRequest(_ScanRequest):
+    image_base64: str = Field(..., min_length=1, description="Base64-encoded screenshot")
 
 
 # ---- Unified response (every endpoint returns this shape) ----
@@ -77,8 +77,7 @@ class UserProfile(BaseModel):
     gender: Optional[str] = None
     address: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserProfileUpdate(BaseModel):
@@ -120,8 +119,7 @@ class ScanHistoryItem(BaseModel):
     confidence: float
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ScanResponse(BaseModel):
@@ -132,4 +130,4 @@ class ScanResponse(BaseModel):
     reason_codes: list[ReasonCode] = []
     extracted_text: Optional[str] = None   # e.g. OCR/decoded output, if applicable
     confidence: float = Field(..., ge=0, le=1)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

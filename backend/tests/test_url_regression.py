@@ -1,4 +1,4 @@
-"""Regression tests for the URL classifier.
+r"""Regression tests for the URL classifier.
 
 Run from D:\AI-Guardian\backend:   python -m pytest tests -q
 Re-run after EVERY retrain of models/url_model.joblib.

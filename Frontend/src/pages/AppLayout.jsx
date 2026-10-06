@@ -1,15 +1,34 @@
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import ShieldMark from "../components/ShieldMark";
+import GuestBanner from "../components/GuestBanner";
+import GuestLimitModal from "../components/GuestLimitModal";
+import { useAuth } from "../context/AuthContext";
 import { useT } from "../i18n";
 
 export default function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const t = useT();
+  const { isGuest, guestLocked, openLimitModal } = useAuth();
+  const { pathname } = useLocation();
+
+  // Once the free sample scans are used up, the visitor may still read the last
+  // result - but the moment they go anywhere else, the login/sign-up wall appears.
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    if (isGuest && guestLocked && lastPath.current !== pathname) openLimitModal();
+    lastPath.current = pathname;
+  }, [pathname, isGuest, guestLocked, openLimitModal]);
+  // Re-entering sample mode with no tries left shows the wall straight away.
+  useEffect(() => {
+    if (isGuest && guestLocked) openLimitModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGuest]);
 
   return (
     <div className="flex h-screen bg-ink">
+      <GuestLimitModal />
       {/* Phone only: dim the page behind the open menu; tap to close. */}
       {menuOpen && (
         <div
@@ -36,6 +55,7 @@ export default function AppLayout() {
           <span className="font-display text-base font-semibold text-textPrimary">AI Guardian</span>
         </div>
         <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8 sm:py-10">
+          <GuestBanner />
           <Outlet />
         </div>
       </main>

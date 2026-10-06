@@ -5,6 +5,9 @@ import { useT } from "../../i18n";
 import ExampleChips from "../../components/ExampleChips";
 import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
+import { useAuth } from "../../context/AuthContext";
+import SampleExamples from "../../components/SampleExamples";
+import { useDemoExamples } from "../../utils/demo";
 
 const EXAMPLES = [
   {
@@ -23,6 +26,9 @@ const EXAMPLES = [
 
 export default function ScanText() {
   const t = useT();
+  const { isGuest, guestScan, guestLocked, openLimitModal } = useAuth();
+  const demo = useDemoExamples("text", isGuest);
+  const [picked, setPicked] = useState(null); // sample-mode example currently in the box
   const [text, setText] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -30,23 +36,30 @@ export default function ScanText() {
 
   function handleClear() {
     setText("");
+    setPicked(null);
     setResult(null);
     setError("");
   }
 
   function handleExample(ex) {
     setText(ex.text);
+    setPicked(ex);
     setResult(null);
     setError("");
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (isGuest && !picked) return;
+    if (guestLocked) {
+      openLimitModal();
+      return;
+    }
     setError("");
     setResult(null);
     setLoading(true);
     try {
-      const data = await api.predictText(text);
+      const data = isGuest ? await guestScan("text", picked.id) : await api.predictText(text);
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -67,16 +80,21 @@ export default function ScanText() {
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          required
+          required={!isGuest}
+          readOnly={isGuest}
           rows={6}
-          placeholder={t("text.placeholder")}
+          placeholder={isGuest ? t("demo.placeholder") : t("text.placeholder")}
           className="w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
         />
-        <ExampleChips examples={EXAMPLES} onPick={handleExample} disabled={loading} />
+        {isGuest ? (
+          <SampleExamples {...demo} selectedId={picked?.id} onPick={handleExample} disabled={loading} />
+        ) : (
+          <ExampleChips examples={EXAMPLES} onPick={handleExample} disabled={loading} />
+        )}
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isGuest && !picked)}
             className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {loading ? t("common.checking") : t("text.button")}

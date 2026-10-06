@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import ShieldMark from "../components/ShieldMark";
 
 const FEATURES = [
@@ -10,6 +11,14 @@ const FEATURES = [
 ];
 
 export default function Home() {
+  const { startGuest, isAuthed } = useAuth();
+  const navigate = useNavigate();
+
+  function trySampleMode() {
+    startGuest();
+    navigate("/app");
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ink px-4">
       {/* Soft brand glow behind the hero content */}
@@ -56,6 +65,22 @@ export default function Home() {
             Create an account
           </Link>
         </div>
+
+        {/* Sample mode: opens the app without an account, limited to a few example scans. */}
+        {!isAuthed && (
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={trySampleMode}
+              className="w-full rounded-md border border-dashed border-brand/50 bg-brand/5 py-2.5 text-sm font-medium text-brand transition-colors hover:bg-brand/10"
+            >
+              Try sample mode — no login needed
+            </button>
+            <p className="mt-2 text-xs text-textSecondary">
+              Run 3 free example scans (safe, in-between and risky) to see how it works.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

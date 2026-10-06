@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import PasswordInput from "../components/PasswordInput";
 import ShieldMark from "../components/ShieldMark";
@@ -7,6 +7,7 @@ import ShieldMark from "../components/ShieldMark";
 export default function Login() {
   const { login, error } = useAuth();
   const navigate = useNavigate();
+  const expired = useLocation().state?.expired;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +61,11 @@ export default function Login() {
             />
           </div>
 
+          {expired && !error && (
+            <p className="rounded-md border border-suspicious/40 bg-suspicious/10 px-3 py-2 text-sm text-suspicious">
+              Your session has expired. Please log in again.
+            </p>
+          )}
           {error && <p className="text-sm text-dangerous">{error}</p>}
 
           <button

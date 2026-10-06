@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { PrefsProvider } from "./context/PrefsContext";
 import RequireAuth from "./components/RequireAuth";
+import AccountOnly from "./components/AccountOnly";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -40,14 +41,14 @@ export default function App() {
             }
           >
             <Route index element={<Overview />} />
-            <Route path="account" element={<Account />} />
-            <Route path="history" element={<History />} />
+            <Route path="account" element={<AccountOnly><Account /></AccountOnly>} />
+            <Route path="history" element={<AccountOnly><History /></AccountOnly>} />
             <Route path="scan/text" element={<ScanText />} />
             <Route path="scan/url" element={<ScanUrl />} />
             <Route path="scan/email" element={<ScanEmail />} />
             <Route path="scan/qr" element={<ScanQr />} />
             <Route path="scan/screenshot" element={<ScanScreenshot />} />
-            <Route path="scan/bulk" element={<ScanBulk />} />
+            <Route path="scan/bulk" element={<AccountOnly><ScanBulk /></AccountOnly>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

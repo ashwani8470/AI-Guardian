@@ -78,3 +78,16 @@ After retraining the URL model, run the tests again.
 - The URL model alone is weaker on short homepages of small, unknown sites, so treat the score as a risk indicator, not a verdict.
 - **Screenshot scans read text only.** They find scam messages inside screenshots but cannot tell whether a payment screenshot was edited or faked.
 - Predictions are statistical. Do not rely on them as the only check before sending money or credentials.
+
+## Sample mode (try without an account)
+
+The home page has a **Try sample mode** button next to *Log in* / *Create an account*. It opens the
+normal app without a login. On every scan page the visitor gets three examples - **Safe**,
+**In the middle** and **Risky** - that fill the input box; pressing the check button runs the real
+model on them. The examples live in `backend/app/services/demo_examples.py` (served by
+`GET /demo/examples`).
+
+* Limit: **3 scans in total across all features** (change with `DEMO_SCAN_LIMIT` in `backend/.env`).
+  The count is kept on the server per browser (`X-Guest-Id`), so reloading doesn't reset it.
+* After the last free scan the result stays readable; the next click shows a login / sign-up wall.
+* Sample scans are never saved; History, My account and Check-many-links need a real account.

@@ -15,6 +15,8 @@ from pathlib import Path
 import joblib
 import numpy as np
 
+from app.services.language_rules import analyse_regional_text
+
 
 MODELS_DIR = Path(__file__).resolve().parents[3] / "models"
 MODEL_PATH = MODELS_DIR / "text_model.joblib"
@@ -84,6 +86,17 @@ def predict_text(content: str) -> dict:
             "weight": round(abs(float(weight)), 4),
             "detail": f"'{label}' contributed to this result",
         })
+
+    # Hindi / Hinglish: the model above only understands English, so combine it
+    # with the keyword rules (see language_rules.py). Never lower the model's score.
+    regional = analyse_regional_text(content)
+    if regional is not None:
+        if regional["unsupported"] or regional["risk_score"] > risk_score:
+            risk_score = max(risk_score, regional["risk_score"])
+            confidence = regional["confidence"]
+            reason_codes = regional["reason_codes"] + (
+                [] if regional["unsupported"] else reason_codes
+            )
 
     return {
         "risk_score": risk_score,

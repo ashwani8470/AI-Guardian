@@ -60,6 +60,13 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     return Token(access_token=token)
 
 
+def _utc_now_naive() -> datetime:
+    """UTC "now" without tzinfo. The reset-token columns are plain (naive) DateTime,
+    so every value written to / compared with them is naive UTC - no dependence on
+    the database session's time zone."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 _GENERIC_FORGOT_PASSWORD_MESSAGE = (
     "If an account exists for that email, a reset link has been sent."
 )
@@ -76,7 +83,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
 
     if user:
         raw_token, token_hash = generate_password_reset_token()
-        expires_at = datetime.now(timezone.utc) + timedelta(
+        expires_at = _utc_now_naive() + timedelta(
             minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
         )
         db.add(
@@ -110,11 +117,11 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
         .first()
     )
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now_naive()
     if (
         reset_token is None
         or reset_token.used_at is not None
-        or reset_token.expires_at.replace(tzinfo=timezone.utc) < now
+        or reset_token.expires_at.replace(tzinfo=None) < now
     ):
         raise HTTPException(status_code=400, detail="Invalid or expired reset link")
 

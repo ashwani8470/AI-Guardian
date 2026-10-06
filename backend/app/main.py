@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import CORS_ORIGINS
 from app.db.database import Base, engine
-from app.routers import auth, email, history, qr, screenshot, text, url
+from app.routers import auth, demo, email, history, qr, screenshot, text, url
 
 app = FastAPI(
     title="AI Guardian API",
@@ -31,6 +31,7 @@ app.include_router(email.router)
 app.include_router(qr.router)
 app.include_router(screenshot.router)
 app.include_router(history.router)
+app.include_router(demo.router)
 
 
 @app.get("/")

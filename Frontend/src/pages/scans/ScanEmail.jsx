@@ -5,6 +5,9 @@ import { useT } from "../../i18n";
 import ExampleChips from "../../components/ExampleChips";
 import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
+import { useAuth } from "../../context/AuthContext";
+import SampleExamples from "../../components/SampleExamples";
+import { useDemoExamples } from "../../utils/demo";
 
 const EXAMPLES = [
   {
@@ -21,6 +24,9 @@ const EXAMPLES = [
 
 export default function ScanEmail() {
   const t = useT();
+  const { isGuest, guestScan, guestLocked, openLimitModal } = useAuth();
+  const demo = useDemoExamples("email", isGuest);
+  const [picked, setPicked] = useState(null); // sample-mode example currently in the box
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [result, setResult] = useState(null);
@@ -30,6 +36,7 @@ export default function ScanEmail() {
   function handleClear() {
     setSubject("");
     setBody("");
+    setPicked(null);
     setResult(null);
     setError("");
   }
@@ -37,17 +44,23 @@ export default function ScanEmail() {
   function handleExample(ex) {
     setSubject(ex.subject);
     setBody(ex.body);
+    setPicked(ex);
     setResult(null);
     setError("");
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (isGuest && !picked) return;
+    if (guestLocked) {
+      openLimitModal();
+      return;
+    }
     setError("");
     setResult(null);
     setLoading(true);
     try {
-      const data = await api.predictEmail({ subject, body });
+      const data = isGuest ? await guestScan("email", picked.id) : await api.predictEmail({ subject, body });
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -68,6 +81,7 @@ export default function ScanEmail() {
         <input
           type="text"
           value={subject}
+          readOnly={isGuest}
           onChange={(e) => setSubject(e.target.value)}
           placeholder={t("email.subject")}
           className="w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
@@ -75,16 +89,21 @@ export default function ScanEmail() {
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          required
+          required={!isGuest}
+          readOnly={isGuest}
           rows={6}
-          placeholder={t("email.placeholder")}
+          placeholder={isGuest ? t("demo.placeholder") : t("email.placeholder")}
           className="w-full rounded-md border border-hairline bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:border-brand"
         />
-        <ExampleChips examples={EXAMPLES} onPick={handleExample} disabled={loading} />
+        {isGuest ? (
+          <SampleExamples {...demo} selectedId={picked?.id} onPick={handleExample} disabled={loading} />
+        ) : (
+          <ExampleChips examples={EXAMPLES} onPick={handleExample} disabled={loading} />
+        )}
         <div className="flex gap-3">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isGuest && !picked)}
             className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {loading ? t("common.checking") : t("email.button")}

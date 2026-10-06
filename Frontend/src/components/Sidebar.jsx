@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import ShieldMark from "./ShieldMark";
 import { useAuth } from "../context/AuthContext";
 import { usePrefs } from "../context/PrefsContext";
@@ -73,7 +73,7 @@ function ToggleIcon({ collapsed }) {
 }
 
 export default function Sidebar({ mobileOpen = false, onClose = () => {} }) {
-  const { logout } = useAuth();
+  const { logout, isGuest, endGuest } = useAuth();
   const t = useT();
   const { simple, setSimple, lang, setLang } = usePrefs();
   const navigate = useNavigate();
@@ -129,14 +129,18 @@ export default function Sidebar({ mobileOpen = false, onClose = () => {} }) {
           <OverviewIcon />
           <span className={collapsed ? "md:hidden" : ""}>{t("nav.overview")}</span>
         </NavLink>
-        <NavLink to="/app/account" onClick={onClose} className={linkClasses(collapsed)} title={t("nav.account")}>
-          <AccountIcon />
-          <span className={collapsed ? "md:hidden" : ""}>{t("nav.account")}</span>
-        </NavLink>
-        <NavLink to="/app/history" onClick={onClose} className={linkClasses(collapsed)} title={t("nav.history")}>
-          <HistoryIcon />
-          <span className={collapsed ? "md:hidden" : ""}>{t("nav.history")}</span>
-        </NavLink>
+        {!isGuest && (
+          <>
+            <NavLink to="/app/account" onClick={onClose} className={linkClasses(collapsed)} title={t("nav.account")}>
+              <AccountIcon />
+              <span className={collapsed ? "md:hidden" : ""}>{t("nav.account")}</span>
+            </NavLink>
+            <NavLink to="/app/history" onClick={onClose} className={linkClasses(collapsed)} title={t("nav.history")}>
+              <HistoryIcon />
+              <span className={collapsed ? "md:hidden" : ""}>{t("nav.history")}</span>
+            </NavLink>
+          </>
+        )}
       </nav>
 
       <div className="space-y-1 border-t border-hairline p-3">
@@ -166,6 +170,48 @@ export default function Sidebar({ mobileOpen = false, onClose = () => {} }) {
           <span className="flex h-[18px] w-[18px] items-center justify-center text-sm font-semibold leading-none">अ</span>
           <span className={collapsed ? "md:hidden" : ""}>{t("nav.language")}</span>
         </button>
+        {isGuest ? (
+          <>
+            <Link
+              to="/login"
+              onClick={onClose}
+              title={t("nav.login")}
+              className={[
+                "flex w-full items-center gap-3 rounded-md bg-brand/15 px-3 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand/25",
+                collapsed ? "md:justify-center md:px-2" : "",
+              ].join(" ")}
+            >
+              <LogoutIcon />
+              <span className={collapsed ? "md:hidden" : ""}>{t("nav.login")}</span>
+            </Link>
+            <Link
+              to="/signup"
+              onClick={onClose}
+              title={t("nav.signup")}
+              className={[
+                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-textSecondary transition-colors hover:bg-surfaceRaised/60 hover:text-textPrimary",
+                collapsed ? "md:justify-center md:px-2" : "",
+              ].join(" ")}
+            >
+              <AccountIcon />
+              <span className={collapsed ? "md:hidden" : ""}>{t("nav.signup")}</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                endGuest();
+                navigate("/", { replace: true });
+              }}
+              className={[
+                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-xs text-textSecondary transition-colors hover:text-textPrimary",
+                collapsed ? "md:hidden" : "",
+              ].join(" ")}
+            >
+              {t("guest.exit")}
+            </button>
+          </>
+        ) : (
         <button
           onClick={handleLogout}
           title={t("nav.logout")}
@@ -177,6 +223,7 @@ export default function Sidebar({ mobileOpen = false, onClose = () => {} }) {
           <LogoutIcon />
           <span className={collapsed ? "md:hidden" : ""}>{t("nav.logout")}</span>
         </button>
+        )}
       </div>
     </aside>
   );

@@ -7,6 +7,11 @@ from sqlalchemy.orm import relationship
 from app.db.database import Base
 
 
+def utc_now():
+    """Naive UTC timestamp (matches the plain DateTime columns below)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 def gen_uuid():
     return str(uuid.uuid4())
 
@@ -21,7 +26,7 @@ class User(Base):
     phone_number = Column(String, nullable=True)
     gender = Column(String, nullable=True)
     address = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
 
     scans = relationship("Scan", back_populates="user")
 
@@ -40,7 +45,7 @@ class PasswordResetToken(Base):
     token_hash = Column(String(64), unique=True, index=True, nullable=False)  # sha256 hex digest
     expires_at = Column(DateTime, nullable=False)
     used_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
 
     user = relationship("User")
 
@@ -55,7 +60,7 @@ class Scan(Base):
     risk_tier = Column(String, nullable=False)          # safe | suspicious | dangerous
     confidence = Column(Float, nullable=False)
     extracted_text = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=utc_now, index=True)
 
     user = relationship("User", back_populates="scans")
     reports = relationship("ThreatReport", back_populates="scan")
@@ -72,3 +77,17 @@ class ThreatReport(Base):
     detail = Column(Text, nullable=True)
 
     scan = relationship("Scan", back_populates="reports")
+
+
+class GuestUsage(Base):
+    """
+    How many sample-mode scans a not-logged-in visitor has used. The browser
+    makes up a random guest id and sends it in the X-Guest-Id header; the
+    server counts there, so clearing the page's JS state doesn't reset it.
+    """
+    __tablename__ = "guest_usage"
+
+    guest_id = Column(String(64), primary_key=True)
+    used = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)

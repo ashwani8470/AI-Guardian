@@ -5,9 +5,15 @@ import { useT } from "../../i18n";
 import ScanLoadingSteps from "../../components/ScanLoadingSteps";
 import RiskResult from "../../components/RiskResult";
 import ImageDropInput from "../../components/ImageDropInput";
+import { useAuth } from "../../context/AuthContext";
+import SampleExamples from "../../components/SampleExamples";
+import { useDemoExamples, base64ToFile } from "../../utils/demo";
 
 export default function ScanScreenshot() {
   const t = useT();
+  const { isGuest, guestScan, guestLocked, openLimitModal } = useAuth();
+  const demo = useDemoExamples("screenshot", isGuest);
+  const [picked, setPicked] = useState(null); // sample-mode example currently shown
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -15,6 +21,14 @@ export default function ScanScreenshot() {
 
   function handleClear() {
     setFile(null);
+    setPicked(null);
+    setResult(null);
+    setError("");
+  }
+
+  function handleExample(ex) {
+    setPicked(ex);
+    setFile(base64ToFile(ex.image_base64, `sample-screenshot-${ex.tone}.png`));
     setResult(null);
     setError("");
   }
@@ -22,12 +36,17 @@ export default function ScanScreenshot() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file) return;
+    if (guestLocked) {
+      openLimitModal();
+      return;
+    }
     setError("");
     setResult(null);
     setLoading(true);
     try {
-      const base64 = await fileToBase64(file);
-      const data = await api.predictScreenshot(base64);
+      const data = isGuest
+        ? await guestScan("screenshot", picked.id)
+        : await api.predictScreenshot(await fileToBase64(file));
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -47,12 +66,18 @@ export default function ScanScreenshot() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <ImageDropInput
           file={file}
+          readOnly={isGuest}
+          emptyHint={t("demo.imageHint")}
           onChange={(f) => {
+            if (isGuest) setPicked(null);
             setFile(f);
             setResult(null); // a new/removed image makes the old result stale
             setError("");
           }}
         />
+        {isGuest && (
+          <SampleExamples {...demo} selectedId={picked?.id} onPick={handleExample} disabled={loading} />
+        )}
         <div className="flex gap-3">
         <button
           type="submit"

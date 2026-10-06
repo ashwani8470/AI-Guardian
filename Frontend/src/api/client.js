@@ -6,8 +6,33 @@ function getToken() {
   return localStorage.getItem("ag_token");
 }
 
-async function request(path, { method = "GET", body, isForm = false, auth = true } = {}) {
+export const SESSION_EXPIRED_EVENT = "ag:session-expired";
+
+export class HttpError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
+// Random id that identifies this browser in sample (guest) mode, so the server
+// can count the free scans. It is kept even after login/logout on purpose.
+export function getGuestId() {
+  try {
+    let id = localStorage.getItem("ag_guest_id");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("ag_guest_id", id);
+    }
+    return id;
+  } catch {
+    return "guest-no-storage-0000";
+  }
+}
+
+async function request(path, { method = "GET", body, isForm = false, auth = true, guest = false } = {}) {
   const headers = {};
+  if (guest) headers["X-Guest-Id"] = getGuestId();
   if (!isForm) headers["Content-Type"] = "application/json";
   if (auth) {
     const token = getToken();
@@ -23,13 +48,25 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
   let data = null;
   try {
     data = await res.json();
-  } catch (e) {
+  } catch {
     // no JSON body
   }
 
   if (!res.ok) {
-    const message = (data && (data.detail || data.message)) || `Request failed (${res.status})`;
-    throw new Error(message);
+    // An expired/invalid login token: drop it and tell the app, which sends the
+    // user back to the login page. (Wrong-password errors on /auth/login have
+    // auth:false and are shown on the form instead.)
+    if (res.status === 401 && auth && getToken()) {
+      clearToken();
+      clearStoredUser();
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+      throw new HttpError("Your session has expired. Please log in again.", 401);
+    }
+    const detail = data && (data.detail || data.message);
+    // FastAPI validation errors come back as a list of objects.
+    const message =
+      typeof detail === "string" ? detail : detail ? "Please check what you entered and try again." : `Request failed (${res.status})`;
+    throw new HttpError(message, res.status);
   }
   return data;
 }
@@ -58,6 +95,17 @@ export const api = {
   predictScreenshot: (imageBase64) =>
     request("/predict/screenshot", { method: "POST", body: { image_base64: imageBase64 } }),
 
+  // Sample (guest) mode - no login; only the server's preset examples can be scanned.
+  demoExamples: () => request("/demo/examples", { auth: false }),
+  demoStatus: () => request("/demo/status", { auth: false, guest: true }),
+  demoScan: (modality, exampleId) =>
+    request("/demo/scan", {
+      method: "POST",
+      body: { modality, example_id: exampleId },
+      auth: false,
+      guest: true,
+    }),
+
   getHistory: () => request("/scans", { method: "GET" }),
   deleteHistory: () => request("/scans", { method: "DELETE" }),
   deleteAccount: (password) =>
@@ -69,7 +117,7 @@ export const api = {
     const res = await fetch(`${BASE_URL}/scans/export`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
-    if (!res.ok) throw new Error(`Download failed (${res.status})`);
+    if (!res.ok) throw new HttpError(`Download failed (${res.status})`, res.status);
     return res.blob();
   },
 };
@@ -96,7 +144,7 @@ export function setStoredUser(user) {
 export function getStoredUser() {
   try {
     return JSON.parse(localStorage.getItem("ag_user")) || null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }

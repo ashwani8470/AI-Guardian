@@ -46,6 +46,7 @@ export function PrefsProvider({ children }) {
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePrefs() {
   const ctx = useContext(PrefsContext);
   if (!ctx) throw new Error("usePrefs must be used inside <PrefsProvider>");

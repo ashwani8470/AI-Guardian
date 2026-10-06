@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useT } from "../i18n";
 
-export default function ImageDropInput({ file, onChange }) {
+export default function ImageDropInput({ file, onChange, readOnly = false, emptyHint }) {
   const t = useT();
   const inputRef = useRef(null);
 
@@ -22,13 +22,15 @@ export default function ImageDropInput({ file, onChange }) {
 
   return (
     <div
-      onClick={() => inputRef.current?.click()}
+      onClick={() => !readOnly && inputRef.current?.click()}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
-        handleFile(e.dataTransfer.files?.[0]);
+        if (!readOnly) handleFile(e.dataTransfer.files?.[0]);
       }}
-      className="relative cursor-pointer rounded-md border border-dashed border-hairline bg-surface p-8 text-center transition-colors hover:border-brand/50"
+      className={`relative rounded-md border border-dashed border-hairline bg-surface p-8 text-center transition-colors ${
+        readOnly ? "" : "cursor-pointer hover:border-brand/50"
+      }`}
     >
       <input
         ref={inputRef}
@@ -56,10 +58,14 @@ export default function ImageDropInput({ file, onChange }) {
       {preview ? (
         <img src={preview} alt="Selected file preview" className="mx-auto max-h-48 rounded-md" />
       ) : (
-        <>
-          <p className="text-sm text-textPrimary">{t("common.dropHere")}</p>
-          <p className="mt-1 text-xs text-textSecondary">{t("common.imageTypes")}</p>
-        </>
+        readOnly ? (
+          <p className="text-sm text-textSecondary">{emptyHint}</p>
+        ) : (
+          <>
+            <p className="text-sm text-textPrimary">{t("common.dropHere")}</p>
+            <p className="mt-1 text-xs text-textSecondary">{t("common.imageTypes")}</p>
+          </>
+        )
       )}
       {file && <p className="mt-3 text-xs text-textSecondary">{file.name}</p>}
     </div>

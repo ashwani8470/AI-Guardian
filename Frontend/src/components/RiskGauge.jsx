@@ -17,7 +17,6 @@ export default function RiskGauge({
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
-    setAnimatedScore(0);
     const clamped = Math.max(0, Math.min(100, score));
     const durationMs = 900;
     const startTime = performance.now();
