@@ -1,16 +1,18 @@
-fastapi
-uvicorn[standard]
-pydantic
-python-dotenv
+# Pinned to the versions tested locally (a fresh install of unpinned SQLAlchemy 2.1
+# defaults postgresql:// to psycopg v3, which would break the deploy).
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+python-dotenv==1.2.3
 
 # database
-sqlalchemy
-psycopg2-binary
+sqlalchemy==2.0.52
+psycopg2-binary==2.9.12
 
 # auth
-python-jose[cryptography]
-bcrypt
-email-validator
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
+email-validator==2.3.0
 # ML inference (loading trained .joblib models from models/)
 # Pinned: the .joblib models were saved with scikit-learn 1.9.1 and may not
 # load correctly under other versions.

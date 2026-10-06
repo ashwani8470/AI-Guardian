@@ -8,7 +8,13 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@localhost:5432/ai_guardian",
 )
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-this-before-any-real-deploy")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    # Refuse to start with a guessable default: anyone could forge login tokens.
+    raise RuntimeError(
+        "SECRET_KEY is not set. Add it to backend/.env or the server's environment. "
+        'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(48))"'
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day, fine for a college project demo
 
