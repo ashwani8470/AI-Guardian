@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import ShieldMark from "../components/ShieldMark";
+import detectiveLogo from "../assets/ai_guardian_detective_logo.png";
 
 const FEATURES = [
   { label: "Text & SMS" },
@@ -28,14 +28,14 @@ export default function Home() {
       />
 
       <div className="relative w-full max-w-md text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-hairline bg-surface shadow-lg shadow-black/20">
-          <ShieldMark size={32} className="text-brand" glow />
-        </div>
+        <img
+          src={detectiveLogo}
+          alt="AI Guardian"
+          className="mx-auto -my-6 w-80 max-w-full select-none mix-blend-lighten"
+          draggable={false}
+        />
 
-        <h1 className="mt-6 font-display text-3xl font-semibold text-textPrimary">
-          AI Guardian
-        </h1>
-        <p className="mt-2 text-sm text-textSecondary">
+        <p className="mt-4 text-sm text-textSecondary">
           Your first check before you click, pay, or reply — spot scams in
           texts, emails, links, QR codes, and payment screenshots.
         </p>
